@@ -1,0 +1,138 @@
+#include<stdio.h>
+#include<windows.h>
+#include <Shlwapi.h>
+#include<direct.h>
+#include<stdbool.h>
+#pragma comment(lib, "Shlwapi.lib")
+HINSTANCE g_hInstance = NULL;
+HHOOK g_hHook = NULL;
+HWND g_hWnd = NULL;
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
+	switch (dwReason) {
+		case DLL_PROCESS_ATTACH:
+			g_hInstance = hinstDLL;
+			break;
+		case DLL_PROCESS_DETACH:
+			break;
+	}
+	return TRUE;
+
+}
+HWND g_HWND = NULL;
+BOOL CALLBACK EnumProc(HWND hwnd, LPARAM lparam) {
+	DWORD lpdwProcessId;
+	GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+	if (lpdwProcessId == lparam) {
+		g_HWND = hwnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+HWND GetHWND() {
+	DWORD pid = GetCurrentProcessId();
+	if (pid == 0 || pid == -1)return NULL;
+	EnumWindows(EnumProc, (LPARAM)pid);
+	return g_HWND;
+}
+void PushFileQueue(char* dir, char* text, char ch, int size) {
+	char curr_path[MAX_PATH] = { 0 };
+	char next_path[MAX_PATH] = { 0 };
+	for (int i = size - 1; i >= 0; i--) {
+		sprintf(curr_path, "%s%d.txt\0", dir, i);
+		sprintf(next_path, "%s%d.txt\0", dir, i + 1);
+		if (PathFileExistsA(curr_path) == TRUE) {
+			MoveFileA(curr_path, next_path);
+		}
+	}
+	FILE* fp = fopen(curr_path, "w");
+	fprintf(fp, text);
+	fputc(ch, fp);
+	fclose(fp);
+}
+
+typedef struct Stack Stack;
+#define CAPACITY 20
+static char g_notepad[CAPACITY][0xFFFF];
+struct Stack {
+	char* notepad[CAPACITY];
+	int top;
+};
+void LOG(char* msg) {
+	FILE* fp = fopen("c:\\Users\\VIRNECT\\Desktop\\hook.txt", "a+");
+	fprintf(fp, msg);
+	fclose(fp);
+}
+bool isNotepadApp() {
+	char szPath[MAX_PATH] = { 0, };
+	char *p = NULL;
+	GetModuleFileNameA(NULL, szPath, MAX_PATH);
+	p = strrchr(szPath, '\\');
+	return !_stricmp(p + 1, "notepad.exe");
+}
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+#define KEYPRESSED(lparam)	(!(lParam & 0x80000000))
+#define KEYRELEASED(lparam)	((lParam & 0x80000000))
+	static Stack stack;
+	static bool init = true;
+	if (init == true) {
+		init = false;
+		for (int i = 0; i < CAPACITY; i++)
+			stack.notepad[i] = g_notepad[i];
+		stack.top = 0;
+		LOG("=====init=====\n");
+	}
+
+	if (nCode >= 0 && KEYPRESSED(lParam) && isNotepadApp()) {
+		char ch = 0;
+		if ((wParam == VK_SPACE) || (wParam == VK_RETURN) || (wParam >= 0x2f) && (wParam <= 0x100)) {
+			if (wParam == VK_RETURN) {
+				ch = '\n';
+			} else {
+				BYTE ks[256];
+				GetKeyboardState(ks);
+				WORD w;
+				ToAscii(wParam, 0, ks, &w, 0);
+				ch = (char)w;
+			}
+		}
+		HWND hwnd = GetHWND();
+		HWND hwnd_edit = FindWindowExA(hwnd, 0, "Edit", NULL);
+
+		char* notepad = stack.notepad[stack.top];
+		SendMessageA(hwnd_edit, WM_GETTEXT, 65535, notepad);
+		int length = strlen(notepad);
+		if (length < 0xFFFF) {
+			notepad[length] = ch;
+			char tmp_path[MAX_PATH] = { 0 };
+			GetTempPathA(MAX_PATH, tmp_path);
+			//%TEMP%\HWND\ number queue stack
+			char nsp_path[MAX_PATH] = { 0 };
+			sprintf(nsp_path, "%sNSpring\\", tmp_path);
+			_mkdir(nsp_path);
+			char hwnd_path[MAX_PATH] = { 0 };
+			sprintf(hwnd_path, "%s%x\\", nsp_path, hwnd);
+			_mkdir(hwnd_path);
+			PushFileQueue(hwnd_path, notepad, ch, 5);
+
+
+
+
+			char str[1024] = { 0 };
+			sprintf(str, "%x : %s\n", hwnd_edit, notepad);
+			LOG(str);
+			free(notepad);
+		}
+	}
+	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+}
+
+__declspec(dllexport) void HookStart() {
+	g_hHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, g_hInstance, 0);
+}
+__declspec(dllexport) void HookStop() {
+	if (g_hHook) {
+		UnhookWindowsHookEx(g_hHook);
+		g_hHook = NULL;
+	}
+}

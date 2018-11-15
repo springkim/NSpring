@@ -1,13 +1,20 @@
+/*
+*  dllMain.c
+*  NSpring
+*
+*  Created by kimbomm on 2018. 11. 15...
+*  Copyright 2018 kimbomm. All rights reserved.
+*
+*/
 #include<stdio.h>
 #include<windows.h>
-#include <Shlwapi.h>
+#include<Shlwapi.h>
 #include<direct.h>
 #include<stdbool.h>
 #pragma comment(lib, "Shlwapi.lib")
 HINSTANCE g_hInstance = NULL;
 HHOOK g_hHook = NULL;
-HWND g_hWnd = NULL;
-
+HWND g_hwnd = NULL;
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
 	switch (dwReason) {
 		case DLL_PROCESS_ATTACH:
@@ -17,14 +24,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
 			break;
 	}
 	return TRUE;
-
 }
-HWND g_HWND = NULL;
+
 BOOL CALLBACK EnumProc(HWND hwnd, LPARAM lparam) {
 	DWORD lpdwProcessId;
 	GetWindowThreadProcessId(hwnd, &lpdwProcessId);
 	if (lpdwProcessId == lparam) {
-		g_HWND = hwnd;
+		g_hwnd = hwnd;
 		return FALSE;
 	}
 	return TRUE;
@@ -33,36 +39,24 @@ HWND GetHWND() {
 	DWORD pid = GetCurrentProcessId();
 	if (pid == 0 || pid == -1)return NULL;
 	EnumWindows(EnumProc, (LPARAM)pid);
-	return g_HWND;
-}
-void PushFileQueue(char* dir, char* text, char ch, int size) {
-	char curr_path[MAX_PATH] = { 0 };
-	char next_path[MAX_PATH] = { 0 };
-	for (int i = size - 1; i >= 0; i--) {
-		sprintf(curr_path, "%s%d.txt\0", dir, i);
-		sprintf(next_path, "%s%d.txt\0", dir, i + 1);
-		if (PathFileExistsA(curr_path) == TRUE) {
-			MoveFileA(curr_path, next_path);
-		}
-	}
-	FILE* fp = fopen(curr_path, "w");
-	fprintf(fp, text);
-	fputc(ch, fp);
-	fclose(fp);
+	return g_hwnd;
 }
 
-typedef struct Stack Stack;
-#define CAPACITY 20
-char g_notepad[CAPACITY][0xFFFF] = { 0 };
-struct Stack {
-	char* notepad[CAPACITY];
+#define CAPACITY 100
+typedef struct  {
+	char* text;
+	DWORD position;
+}NotepadElement;
+char g_preallocated_text[CAPACITY][0xFFFF] = { 0 };
+char g_preallocated_temp_text[0xFFFF] = { 0 };
+char* g_temp_text = NULL;
+typedef struct {
+	NotepadElement notepad[CAPACITY];
+	int loc;
 	int top;
-};
-void LOG(char* msg) {
-	FILE* fp = fopen("..\\..\\hook.txt", "a+");
-	fprintf(fp, msg);
-	fclose(fp);
-}
+	int top2;
+}CircularQueue;
+
 bool isNotepadApp() {
 	char szPath[MAX_PATH] = { 0, };
 	char *p = NULL;
@@ -70,79 +64,90 @@ bool isNotepadApp() {
 	p = strrchr(szPath, '\\');
 	return !_stricmp(p + 1, "notepad.exe");
 }
-void ClickAndRestore(POINT dst) {
-	POINT point;
-	GetCursorPos(&point);
-	SetCursorPos(dst.x, dst.y);
-	mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-	Sleep(1);
-	mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0); 
-	SetCursorPos(point.x, point.y);
+void LOG(char* msg) {
+	FILE* fp = fopen("C:\\Users\\VIRNECT\\Desktop\\hook.txt", "a+");
+	fputs(msg,fp);
+	fclose(fp);
 }
-LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 #define KEYPRESSED(lparam)	(!(lParam & 0x80000000))
 #define KEYRELEASED(lparam)	((lParam & 0x80000000))
-	static Stack stack;
-	static bool init = true;
-	static char* prev = "";
-	if (init == true) {
-		init = false;
-		for (int i = 0; i < CAPACITY; i++)
-			stack.notepad[i] =  g_notepad[i];
-		stack.top = 0;
-	}
 	if (nCode >= 0 && isNotepadApp()) {
 		HWND hwnd = GetHWND();
 		HWND hwnd_edit = FindWindowExA(hwnd, 0, "Edit", NULL);
-		char* notepad = NULL;
-		if ((GetKeyState(VK_CONTROL) & 0x80) && ((GetAsyncKeyState('z') & 0x8000) || (GetAsyncKeyState('Z') & 0x8000))) {
-			LOG("======Ctrl+Z======\n");
-			if (stack.top > 0) {
-				notepad = stack.notepad[stack.top-1];
-				POINT point;
-				GetCaretPos(&point);
-				RECT rect;
-				GetWindowRect(hwnd_edit, &rect);
-				point.x += rect.left;
-				point.y += rect.top;
-				char str[128] = { 0 };
-				sprintf(str, "(%d,%d)\n", point.x, point.y);
-				LOG(str);
-				if (SendMessageA(hwnd_edit, WM_SETTEXT, 0, notepad) == FALSE) {
-					MessageBoxA(NULL, "WM_SETTEXT failure", "fatal", MB_OK);
-				}
-				ClickAndRestore(point);
-				//저 좌표에다가 직접 마우스 한번 찍고 다시 돌아오면 됨.
-				stack.top--;
+		DWORD dummy;
+		static CircularQueue queue;
+		static bool init = true;
+		if (init == true) {
+			init = false;
+			for (int i = 0; i < CAPACITY; i++) {
+				queue.notepad[i].text = g_preallocated_text[i];
+				queue.notepad[i].position = -1;
+			}
+			SendMessageA(hwnd_edit, WM_GETTEXT, (WPARAM)0xFFFF, (LPARAM)queue.notepad[0].text);
+			SendMessageA(hwnd_edit, EM_GETSEL, (WPARAM)&dummy, (LPARAM)&queue.notepad[0].position);
+			queue.loc = 0;
+			queue.top = 0;
+			g_temp_text = g_preallocated_temp_text;
+			LOG("init");
+		}
+		if ((GetKeyState(VK_CONTROL) & 0x80) && (GetKeyState(VK_SHIFT) & 0x80) && ((GetAsyncKeyState('z') & 0x8000) || (GetAsyncKeyState('Z') & 0x8000))) {
+			NotepadElement* pnotepad = &queue.notepad[(queue.top+1)%CAPACITY];
+			if (queue.top != queue.top2) {
+				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)FALSE, (LPARAM)0);
+				int h_pos = GetScrollPos(hwnd_edit, SB_HORZ);
+				int v_pos = GetScrollPos(hwnd_edit, SB_VERT);
+				SendMessageA(hwnd_edit, EM_SETSEL, 0, -1);
+				SendMessageA(hwnd_edit, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)pnotepad->text);
+				SendMessageA(hwnd_edit, EM_SETSEL, pnotepad->position, pnotepad->position);	//restore caret position
+				SetScrollPos(hwnd_edit, SB_HORZ, h_pos, FALSE);	//restore horizontal scroll position
+				SendMessageA(hwnd_edit, WM_HSCROLL, MAKELPARAM(SB_THUMBPOSITION, h_pos), (LPARAM)NULL);
+				SetScrollPos(hwnd_edit, SB_VERT, v_pos, FALSE);		//restore vertical scroll position
+				SendMessageA(hwnd_edit, WM_VSCROLL, MAKELPARAM(SB_THUMBPOSITION, v_pos), (LPARAM)NULL);
+				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)TRUE, (LPARAM)0);
+				queue.top = (queue.top + 1) % CAPACITY;
 			}
 			return 1;
 		}
-		else if (KEYRELEASED(lParam) && !(GetKeyState(VK_CONTROL) & 0x80)) {
-			if (stack.top == CAPACITY) {
-				char* tmp = stack.notepad[0];
-				memset(tmp, 0, 0xFFFF);
-				for (int i = 1; i < CAPACITY; i++)
-					stack.notepad[i - 1] = stack.notepad[i];
-				notepad=stack.notepad[CAPACITY-1] = tmp;
-			} else {
-				notepad = stack.notepad[stack.top];
+		else if ((GetKeyState(VK_CONTROL) & 0x80) && ((GetAsyncKeyState('z') & 0x8000) || (GetAsyncKeyState('Z') & 0x8000))) {
+			NotepadElement* pnotepad = &queue.notepad[(queue.top+CAPACITY-1)%CAPACITY];
+			if (queue.top!=queue.loc) {
+				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)FALSE, (LPARAM)0);
+				int h_pos=GetScrollPos(hwnd_edit, SB_HORZ);
+				int v_pos= GetScrollPos(hwnd_edit, SB_VERT);
+				SendMessageA(hwnd_edit, EM_SETSEL, 0, -1);
+				SendMessageA(hwnd_edit, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)pnotepad->text);
+				SendMessageA(hwnd_edit, EM_SETSEL, pnotepad->position, pnotepad->position);	//restore caret position
+				SetScrollPos(hwnd_edit, SB_HORZ, h_pos, FALSE);	//restore horizontal scroll position
+				SendMessageA(hwnd_edit,WM_HSCROLL, MAKELPARAM(SB_THUMBPOSITION, h_pos), (LPARAM)NULL);
+				SetScrollPos(hwnd_edit, SB_VERT, v_pos, FALSE);		//restore vertical scroll position
+				SendMessageA(hwnd_edit, WM_VSCROLL, MAKELPARAM(SB_THUMBPOSITION, v_pos), (LPARAM)NULL);
+				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)TRUE, (LPARAM)0);
+				queue.top = (queue.top + CAPACITY - 1) % CAPACITY;
 			}
-			SendMessageA(hwnd_edit, WM_GETTEXT, 0xFFFF, notepad);
-			if(stack.top<CAPACITY) {
-				stack.top++;
+			return 1;
+		} else if (KEYRELEASED(lParam) && !(GetKeyState(VK_CONTROL) & 0x80)) {
+			SendMessageA(hwnd_edit, WM_GETTEXT, (WPARAM)0xFFFF, (LPARAM)g_temp_text);
+			if (strcmp(g_temp_text, queue.notepad[(queue.top + CAPACITY - 1) % CAPACITY].text) != 0) {
+				LOG(queue.notepad[(queue.top + CAPACITY - 1) % CAPACITY].text);
+				LOG(g_temp_text);
+				LOG("==========");
+				queue.top = (queue.top + 1) % CAPACITY;
+				queue.loc = (queue.loc + (queue.top == queue.loc)) % CAPACITY; ;
+				NotepadElement* pnotepad = &queue.notepad[queue.top];
+				char* tmp = g_temp_text;
+				g_temp_text = pnotepad->text;
+				pnotepad->text = tmp;
+				SendMessageA(hwnd_edit, EM_GETSEL, (WPARAM)&dummy, (LPARAM)&pnotepad->position);
+				queue.top2 = queue.top;
 			}
 		}
-		for (int i = 0; i < stack.top; i++) {
-			LOG(stack.notepad[i]);
-			LOG("\n");
-		}
-		LOG("================\n");
 	}
 	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
 }
 
 __declspec(dllexport) void HookStart() {
-	g_hHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, g_hInstance, 0);
+	g_hHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardCapture, g_hInstance, 0);
 }
 __declspec(dllexport) void HookStop() {
 	if (g_hHook) {

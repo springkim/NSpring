@@ -1,8 +1,9 @@
 ﻿  main.c
+main.c(142): warning C4013: 'getch'이(가) 정의되지 않았습니다. extern은 int형을 반환하는 것으로 간주합니다.
   코드를 생성하고 있습니다.
-  4 of 4 functions (100.0%) were compiled, the rest were copied from previous compilation.
+  1 of 4 functions (25.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   코드를 생성했습니다.
-  NSpring.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpring.exe
-  NSpring.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpring.pdb (Full PDB)
+  NSpring.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpring.exe
+  NSpring.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpring.pdb (Full PDB)

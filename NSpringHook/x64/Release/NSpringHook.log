@@ -1,11 +1,11 @@
 ﻿  dllMain.c
-dllMain.c(68): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+dllMain.c(61): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdio.h(205): note: 'fopen' 선언을 참조하십시오.
-     C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpringHook.lib 라이브러리 및 C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpringHook.exp 개체를 생성하고 있습니다.
+     C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpringHook.lib 라이브러리 및 C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpringHook.exp 개체를 생성하고 있습니다.
   코드를 생성하고 있습니다.
-  2 of 7 functions (28.6%) were compiled, the rest were copied from previous compilation.
+  1 of 11 functions ( 9.1%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   코드를 생성했습니다.
-  NSpringHook.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpringHook.dll
-  NSpringHook.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Release\NSpringHook.pdb (Full PDB)
+  NSpringHook.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpringHook.dll
+  NSpringHook.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Release\NSpringHook.pdb (Full PDB)

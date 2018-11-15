@@ -1,3 +1,6 @@
 ﻿  main.c
-  NSpring.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Debug\NSpring.exe
-  NSpring.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Debug\NSpring.pdb (Full PDB)
+c:\users\spring\documents\git\nspring\nspring\main.c(153): warning C4013: 'getch'이(가) 정의되지 않았습니다. extern은 int형을 반환하는 것으로 간주합니다.
+c:\users\spring\documents\git\nspring\nspring\main.c(146): warning C4477: 'printf' : 서식 문자열 '%x'에 'unsigned int' 형식의 인수가 필요하지만 variadic 인수 1의 형식이 'HWND'입니다.
+c:\users\spring\documents\git\nspring\nspring\main.c(146): warning C4313: 'printf': 서식 문자열의 '%x'이(가) 인수 1('HWND' 형식)과(와) 충돌합니다.
+  NSpring.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Debug\NSpring.exe
+  NSpring.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Debug\NSpring.pdb (Full PDB)

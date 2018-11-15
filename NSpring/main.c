@@ -38,10 +38,11 @@ void InitNotifyIconData() {
 	g_notifyIconData.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1));
 	strcpy_s(g_notifyIconData.szTip, 128, "NSpring ~_~");
 }
-typedef void(*HOOKFUNC)();
+typedef void(*HookStopFunc)();
+typedef HHOOK(*HookStartFunc)();
 HMODULE   hDll = NULL;
-HOOKFUNC HookStart = NULL;
-HOOKFUNC HookStop = NULL;
+HookStartFunc HookStart = NULL;
+HookStopFunc HookStop = NULL;
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int iCmdShow) {
 	g_inittime = clock();
@@ -65,8 +66,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
 	InitNotifyIconData();
 	Minimize();
 	hDll = LoadLibraryA("NSpringHook.dll");
-	HookStart = (HOOKFUNC)GetProcAddress(hDll, "HookStart");
-	HookStop = (HOOKFUNC)GetProcAddress(hDll, "HookStop");
+	HookStart = (HookStartFunc)GetProcAddress(hDll, "HookStart");
+	HookStop = (HookStopFunc)GetProcAddress(hDll, "HookStop");
 	HookStart();
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0)) {
@@ -129,4 +130,31 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			break;
 	}
 	return DefWindowProc(hwnd, message, wParam, lParam);
+}
+typedef struct NSPElem {
+	HWND hwnd;
+	HHOOK hook;
+}NSPElem;
+
+int main() {
+	hDll = LoadLibraryA("NSpringHook.dll");
+	HookStart = (HookStartFunc)GetProcAddress(hDll, "HookStart");
+	HookStop = (HookStopFunc)GetProcAddress(hDll, "HookStop");
+
+	HWND hwnd = NULL;
+	while ((hwnd = FindWindowExA(NULL, hwnd, "Notepad", NULL)) != NULL) {
+		printf("%x\n", hwnd);
+	}
+	return 0;
+	
+	if (hwnd != NULL) {
+		HHOOK hook=HookStart(hwnd);
+		printf("press 'q' to quit!\n");
+		while (getch() != 'q');
+
+		HookStop(hook);
+		FreeLibrary(hDll);
+		DeleteFileA("C:\\Users\\spring\\Desktop\\hook.txt");
+	}
+	return 0;
 }

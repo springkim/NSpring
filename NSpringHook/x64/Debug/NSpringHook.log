@@ -1,5 +1,5 @@
 ﻿  dllMain.c
-c:\users\virnect\documents\git\nspring\nspringhook\dllmain.c(68): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\spring\documents\git\nspring\nspringhook\dllmain.c(61): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: 'fopen' 선언을 참조하십시오.
-  NSpringHook.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Debug\NSpringHook.dll
-  NSpringHook.vcxproj -> C:\Users\VIRNECT\Documents\git\NSpring\x64\Debug\NSpringHook.pdb (Full PDB)
+  NSpringHook.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Debug\NSpringHook.dll
+  NSpringHook.vcxproj -> C:\Users\spring\Documents\Git\NSpring\x64\Debug\NSpringHook.pdb (Full PDB)

@@ -11,10 +11,11 @@
 #include<Shlwapi.h>
 #include<direct.h>
 #include<stdbool.h>
-#pragma comment(lib, "Shlwapi.lib")
+
 HINSTANCE g_hInstance = NULL;
 HHOOK g_hHook = NULL;
 HWND g_hwnd = NULL;
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved) {
 	switch (dwReason) {
 		case DLL_PROCESS_ATTACH:
@@ -56,23 +57,29 @@ typedef struct {
 	int top;
 	int top2;
 }CircularQueue;
-
+void LOG(char* msg) {
+	FILE* fp = fopen("C:\\Users\\spring\\Desktop\\hook.txt", "a+");
+	fprintf(fp, msg);
+	fprintf(fp, "\n");
+	fclose(fp);
+}
 bool isNotepadApp() {
 	char szPath[MAX_PATH] = { 0, };
 	char *p = NULL;
 	GetModuleFileNameA(NULL, szPath, MAX_PATH);
+	LOG(szPath);
 	p = strrchr(szPath, '\\');
 	return !_stricmp(p + 1, "notepad.exe");
 }
-void LOG(char* msg) {
-	FILE* fp = fopen("C:\\Users\\VIRNECT\\Desktop\\hook.txt", "a+");
-	fputs(msg,fp);
-	fclose(fp);
-}
+//윈도우 시작시 키 먹통
+
 LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode != HC_ACTION)return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+	//if (g_hHook != GetCurrentProcessId())return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+	LRESULT ret = 0;
 #define KEYPRESSED(lparam)	(!(lParam & 0x80000000))
 #define KEYRELEASED(lparam)	((lParam & 0x80000000))
-	if (nCode >= 0 && isNotepadApp()) {
+	if (nCode >= 0 && isNotepadApp()) {	
 		HWND hwnd = GetHWND();
 		HWND hwnd_edit = FindWindowExA(hwnd, 0, "Edit", NULL);
 		DWORD dummy;
@@ -89,7 +96,6 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 			queue.loc = 0;
 			queue.top = 0;
 			g_temp_text = g_preallocated_temp_text;
-			LOG("init");
 		}
 		if ((GetKeyState(VK_CONTROL) & 0x80) && (GetKeyState(VK_SHIFT) & 0x80) && ((GetAsyncKeyState('z') & 0x8000) || (GetAsyncKeyState('Z') & 0x8000))) {
 			NotepadElement* pnotepad = &queue.notepad[(queue.top+1)%CAPACITY];
@@ -107,7 +113,7 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)TRUE, (LPARAM)0);
 				queue.top = (queue.top + 1) % CAPACITY;
 			}
-			return 1;
+			ret = 1;
 		}
 		else if ((GetKeyState(VK_CONTROL) & 0x80) && ((GetAsyncKeyState('z') & 0x8000) || (GetAsyncKeyState('Z') & 0x8000))) {
 			NotepadElement* pnotepad = &queue.notepad[(queue.top+CAPACITY-1)%CAPACITY];
@@ -125,13 +131,13 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)TRUE, (LPARAM)0);
 				queue.top = (queue.top + CAPACITY - 1) % CAPACITY;
 			}
-			return 1;
+			ret = 1;
 		} else if (KEYRELEASED(lParam) && !(GetKeyState(VK_CONTROL) & 0x80)) {
 			SendMessageA(hwnd_edit, WM_GETTEXT, (WPARAM)0xFFFF, (LPARAM)g_temp_text);
-			if (strcmp(g_temp_text, queue.notepad[(queue.top + CAPACITY - 1) % CAPACITY].text) != 0) {
-				LOG(queue.notepad[(queue.top + CAPACITY - 1) % CAPACITY].text);
+			if (strcmp(g_temp_text, queue.notepad[queue.top].text) != 0) {
+				/*LOG(queue.notepad[queue.top].text);
 				LOG(g_temp_text);
-				LOG("==========");
+				LOG("==========");*/
 				queue.top = (queue.top + 1) % CAPACITY;
 				queue.loc = (queue.loc + (queue.top == queue.loc)) % CAPACITY; ;
 				NotepadElement* pnotepad = &queue.notepad[queue.top];
@@ -143,15 +149,16 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 	}
-	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+	return ret == 0 ? CallNextHookEx(g_hHook, nCode, wParam, lParam) : ret;
 }
 
-__declspec(dllexport) void HookStart() {
-	g_hHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardCapture, g_hInstance, 0);
+__declspec(dllexport) HHOOK HookStart(HWND hwnd) {
+	g_hHook = SetWindowsHookExA(WH_KEYBOARD, KeyboardCapture, g_hInstance, GetWindowThreadProcessId(hwnd,NULL));
+	return g_hHook;
 }
-__declspec(dllexport) void HookStop() {
-	if (g_hHook) {
-		UnhookWindowsHookEx(g_hHook);
-		g_hHook = NULL;
+__declspec(dllexport) void HookStop(HHOOK hook) {
+	if (hook) {
+		UnhookWindowsHookEx(hook);
+		hook = NULL;
 	}
 }

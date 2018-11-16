@@ -8,5 +8,7 @@ MS Notepad Extension Project.
 Run below command on Windows CMD.
 
 ```
-powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;(New-Object System.Net.WebClient).DownloadFile('https://github.com/springkim/NSpring/releases/download/bin/NSpring.exe','%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\NSpring.exe');" & pushd %cd% & cd "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup" & start NSpring.exe & popd
+powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;(New-Object System.Net.WebClient).DownloadFile('https://github.com/springkim/NSpring/releases/download/bin/NSpring.exe','%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\NSpring.exe');" ^
+powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;(New-Object System.Net.WebClient).DownloadFile('https://github.com/springkim/NSpring/releases/download/bin/NSpringHook.dll','%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\NSpringHook.dll');" ^
+ & pushd %cd% & cd "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup" & start NSpring.exe & popd
 ```

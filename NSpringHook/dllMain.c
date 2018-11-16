@@ -47,6 +47,8 @@ HWND GetHWND() {
 typedef struct  {
 	char* text;
 	DWORD position;
+	int vpos;
+	int hpos;
 }NotepadElement;
 char g_preallocated_text[CAPACITY][0xFFFF] = { 0 };
 char g_preallocated_temp_text[0xFFFF] = { 0 };
@@ -78,6 +80,7 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 			for (int i = 0; i < CAPACITY; i++) {
 				queue.notepad[i].text = g_preallocated_text[i];
 				queue.notepad[i].position = -1;
+				queue.notepad[i].hpos = queue.notepad[i].hpos = 0;
 			}
 			SendMessageA(hwnd_edit, WM_GETTEXT, (WPARAM)0xFFFF, (LPARAM)queue.notepad[0].text);
 			SendMessageA(hwnd_edit, EM_GETSEL, (WPARAM)&dummy, (LPARAM)&queue.notepad[0].position);
@@ -89,8 +92,8 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 			NotepadElement* pnotepad = &queue.notepad[(queue.top+1)%CAPACITY];
 			if (queue.top != queue.top2) {
 				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)FALSE, (LPARAM)0);
-				int h_pos = GetScrollPos(hwnd_edit, SB_HORZ);
-				int v_pos = GetScrollPos(hwnd_edit, SB_VERT);
+				int h_pos = pnotepad->hpos;
+				int v_pos = pnotepad->vpos;
 				SendMessageA(hwnd_edit, EM_SETSEL, 0, -1);
 				SendMessageA(hwnd_edit, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)pnotepad->text);
 				SendMessageA(hwnd_edit, EM_SETSEL, pnotepad->position, pnotepad->position);	//restore caret position
@@ -107,8 +110,8 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 			NotepadElement* pnotepad = &queue.notepad[(queue.top+CAPACITY-1)%CAPACITY];
 			if (queue.top!=queue.loc) {
 				SendMessageA(hwnd_edit, WM_SETREDRAW, (WPARAM)FALSE, (LPARAM)0);
-				int h_pos=GetScrollPos(hwnd_edit, SB_HORZ);
-				int v_pos= GetScrollPos(hwnd_edit, SB_VERT);
+				int h_pos = pnotepad->hpos;
+				int v_pos = pnotepad->vpos;
 				SendMessageA(hwnd_edit, EM_SETSEL, 0, -1);
 				SendMessageA(hwnd_edit, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)pnotepad->text);
 				SendMessageA(hwnd_edit, EM_SETSEL, pnotepad->position, pnotepad->position);	//restore caret position
@@ -130,6 +133,8 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 				g_temp_text = pnotepad->text;
 				pnotepad->text = tmp;
 				SendMessageA(hwnd_edit, EM_GETSEL, (WPARAM)&dummy, (LPARAM)&pnotepad->position);
+				pnotepad->hpos = GetScrollPos(hwnd_edit, SB_HORZ);
+				pnotepad->vpos = GetScrollPos(hwnd_edit, SB_VERT);
 				queue.top2 = queue.top;
 			}
 		}

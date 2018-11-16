@@ -43,7 +43,7 @@ HWND GetHWND() {
 	return g_hwnd;
 }
 
-#define CAPACITY 100
+#define CAPACITY 256
 typedef struct  {
 	char* text;
 	DWORD position;
@@ -63,23 +63,11 @@ void LOG(char* msg) {
 	fprintf(fp, "\n");
 	fclose(fp);
 }
-bool isNotepadApp() {
-	char szPath[MAX_PATH] = { 0, };
-	char *p = NULL;
-	GetModuleFileNameA(NULL, szPath, MAX_PATH);
-	LOG(szPath);
-	p = strrchr(szPath, '\\');
-	return !_stricmp(p + 1, "notepad.exe");
-}
-//윈도우 시작시 키 먹통
-
 LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
-	if (nCode != HC_ACTION)return CallNextHookEx(g_hHook, nCode, wParam, lParam);
-	//if (g_hHook != GetCurrentProcessId())return CallNextHookEx(g_hHook, nCode, wParam, lParam);
 	LRESULT ret = 0;
 #define KEYPRESSED(lparam)	(!(lParam & 0x80000000))
 #define KEYRELEASED(lparam)	((lParam & 0x80000000))
-	if (nCode >= 0 && isNotepadApp()) {	
+	if (nCode >= 0) {	
 		HWND hwnd = GetHWND();
 		HWND hwnd_edit = FindWindowExA(hwnd, 0, "Edit", NULL);
 		DWORD dummy;
@@ -135,9 +123,6 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 		} else if (KEYRELEASED(lParam) && !(GetKeyState(VK_CONTROL) & 0x80)) {
 			SendMessageA(hwnd_edit, WM_GETTEXT, (WPARAM)0xFFFF, (LPARAM)g_temp_text);
 			if (strcmp(g_temp_text, queue.notepad[queue.top].text) != 0) {
-				/*LOG(queue.notepad[queue.top].text);
-				LOG(g_temp_text);
-				LOG("==========");*/
 				queue.top = (queue.top + 1) % CAPACITY;
 				queue.loc = (queue.loc + (queue.top == queue.loc)) % CAPACITY; ;
 				NotepadElement* pnotepad = &queue.notepad[queue.top];
@@ -153,8 +138,7 @@ LRESULT CALLBACK KeyboardCapture(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 __declspec(dllexport) HHOOK HookStart(HWND hwnd) {
-	g_hHook = SetWindowsHookExA(WH_KEYBOARD, KeyboardCapture, g_hInstance, GetWindowThreadProcessId(hwnd,NULL));
-	return g_hHook;
+	return (g_hHook = SetWindowsHookExA(WH_KEYBOARD, KeyboardCapture, g_hInstance, GetWindowThreadProcessId(hwnd, NULL)));
 }
 __declspec(dllexport) void HookStop(HHOOK hook) {
 	if (hook) {

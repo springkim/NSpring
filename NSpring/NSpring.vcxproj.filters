@@ -18,9 +18,21 @@
     <ClCompile Include="main.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="hash.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="hash.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -31,6 +43,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\notepad.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="res\BLOGO.ico">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

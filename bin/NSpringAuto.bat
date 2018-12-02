@@ -1,0 +1,2 @@
+powershell "$s=(New-Object -COM WScript.Shell).CreateShortcut('%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\NSpring.lnk');$s.TargetPath='C:\Program Files\NSpring\NSpring.exe';$s.Save();"
+powershell "$s=(New-Object -COM WScript.Shell).CreateShortcut('%SystemDrive%\ProgramData\Microsoft\Windows\Start Menu\Programs\NSpring.lnk');$s.TargetPath='C:\Program Files\NSpring\NSpring.exe';$s.Save()"
